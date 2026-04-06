@@ -11,23 +11,134 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+This simulation builds a **content-based music recommender** that scores every song in a small catalog against a user's taste profile and returns the top matches. It mirrors how Spotify's "taste profile" feature works at a simplified scale — no other users are involved, only song attributes and personal preferences.
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+### How Real-World Recommenders Work
 
-Some prompts to answer:
+Streaming platforms like Spotify and YouTube use two complementary strategies:
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+- **Collaborative filtering** — "People who liked what you liked also loved X." The system finds users with similar listening histories and surfaces songs they enjoyed that you haven't heard yet. It requires large amounts of behavioral data (plays, skips, saves) and works best when many users share overlapping taste.
+- **Content-based filtering** — "This song has attributes similar to songs you already love." The system analyzes features of the music itself — genre, tempo, mood, energy — and recommends songs with matching characteristics. It works even for brand-new users with no history.
 
-You can include a simple diagram or bullet list if helpful.
+Real platforms blend both approaches (hybrid filtering), but this simulation implements **content-based filtering only**, using song attributes from `data/songs.csv`.
+
+---
+
+### Features Used
+
+**`Song` object attributes:**
+
+| Feature | Type | What it captures |
+|---|---|---|
+| `genre` | string | Musical style (pop, lofi, rock, jazz, etc.) |
+| `mood` | string | Emotional tone (happy, chill, intense, moody, etc.) |
+| `energy` | float 0–1 | How driving/loud/active the track feels |
+| `valence` | float 0–1 | Musical positivity (high = upbeat, low = melancholic) |
+| `danceability` | float 0–1 | Rhythmic groove and beat regularity |
+| `acousticness` | float 0–1 | Amount of acoustic (non-electronic) instrumentation |
+| `tempo_bpm` | float | Beats per minute |
+
+**`UserProfile` attributes:**
+
+| Field | What it stores |
+|---|---|
+| `favorite_genre` | The genre the user gravitates toward most |
+| `favorite_mood` | Preferred emotional tone |
+| `target_energy` | Desired energy level (0–1) |
+| `likes_acoustic` | Whether the user prefers acoustic over electronic sound |
+
+---
+
+### Scoring Rule (one song)
+
+Each song receives a **relevance score** computed as a weighted sum:
+
+```
+score = (genre_weight   × genre_match)           # +1 if genre matches, else 0
+      + (mood_weight    × mood_match)             # +1 if mood matches, else 0
+      + (energy_weight  × energy_proximity)       # 1 - |song.energy - user.target_energy|
+      + (acoustic_weight × acoustic_match)        # reward high acousticness if user likes acoustic
+```
+
+The **energy proximity** formula `1 - |song.energy - target|` gives a score of 1.0 for a perfect match and decreases continuously as the gap widens — rewarding *closeness*, not just high or low values.
+
+Suggested weights (to be tuned in experiments):
+
+- `genre_weight = 2.0` — genre is the strongest signal of taste
+- `mood_weight = 1.5` — mood strongly shapes listening context
+- `energy_weight = 1.0` — energy is important but more gradual
+- `acoustic_weight = 0.5` — secondary texture preference
+
+---
+
+### Ranking Rule (all songs)
+
+Once every song has a score, the `Recommender` **sorts the full catalog by score descending** and returns the top `k` songs. This separates concerns: scoring answers "how relevant is this one song?" while ranking answers "given all scores, which songs should I show?"
+
+---
+
+### Example User Profile
+
+The starter profile used in `src/main.py` and in tests:
+
+```python
+user_prefs = {
+    "genre":        "lofi",       # strongly prefers lofi
+    "mood":         "chill",      # wants a calm, relaxed vibe
+    "target_energy": 0.40,        # low-energy background listening
+    "likes_acoustic": True        # prefers natural, warm sound over electronic
+}
+```
+
+**Why this profile tests differentiation well:** A "chill lofi" fan with low energy and acoustic preference should clearly rank songs like *Library Rain* and *Focus Flow* at the top, while high-energy tracks like *Gym Hero* (pop/intense/0.93) and *Pulse Protocol* (edm/energetic/0.97) should score near the bottom — even if they match on energy direction alone.
+
+---
+
+### Finalized Algorithm Recipe
+
+| Signal | Formula | Weight | Rationale |
+|---|---|---|---|
+| Genre match | `1 if song.genre == user.genre else 0` | **2.0** | Strongest predictor of taste; mismatches feel jarring |
+| Mood match | `1 if song.mood == user.mood else 0` | **1.5** | Shapes listening context (workout vs. study vs. sleep) |
+| Energy proximity | `1 - abs(song.energy - user.target_energy)` | **1.0** | Continuous; rewards closeness not extremes |
+| Acoustic texture | `song.acousticness if likes_acoustic else (1 - song.acousticness)` | **0.5** | Secondary tonal preference |
+
+**Max possible score: 5.0** (genre + mood + perfect energy + acoustic alignment)
+
+---
+
+### Data Flow Diagram
+
+```mermaid
+flowchart TD
+    A[("data/songs.csv\n(20 songs)")] -->|load_songs| B[List of Song dicts]
+    U[("UserProfile\ngenre · mood · energy\nlikes_acoustic")] --> C
+
+    B --> C{"Score each song\n(weighted sum)"}
+    C -->|genre match × 2.0| D[partial score]
+    C -->|mood match × 1.5| D
+    C -->|energy proximity × 1.0| D
+    C -->|acoustic match × 0.5| D
+
+    D --> E[("song → total_score\nexplanation string")]
+    E --> F[Sort descending by score]
+    F --> G[Return top K songs]
+    G --> H[("Printed recommendations\nwith scores + reasons")]
+```
+
+---
+
+### Expected Biases and Limitations
+
+- **Genre over-prioritization:** With weight 2.0, a genre match alone outweighs a near-perfect mood + energy match. A song that is the perfect vibe but the wrong genre label will rank poorly — even though the user might love it.
+- **Filter bubble risk:** If the user's favorite genre has only 2 songs in the catalog, the system may always surface the same 2 tracks regardless of other quality signals. It can't recommend what isn't there.
+- **Binary genre matching:** "indie pop" and "pop" are treated as completely different — the system has no concept of genre proximity.
+- **`likes_acoustic` is all-or-nothing:** A user who *sometimes* likes acoustic depending on mood gets no nuance; the flag applies uniformly.
+- **No temporal context:** The system doesn't know if it's 7 AM (chill) or 11 PM (moody). Real platforms use time-of-day as a signal.
 
 ---
 
@@ -96,10 +207,25 @@ Read and complete `model_card.md`:
 
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
+The central thing this project taught me is that a recommender doesn't need to
+be complex to produce outputs that *feel* personalized — and that this is
+precisely what makes simple systems dangerous in production. Four weighted
+signals and a sort were enough to make the `chill_lofi_fan` profile look like a
+handcrafted Spotify playlist. But the same four signals recommended the softest
+song in the catalog to a listener who wanted maximum energy, just because it
+shared a genre label. The algorithm was internally consistent the entire time.
+"Internally consistent" and "actually correct" are not the same thing, and there
+is no formula that can tell you which side of that line you're on — only running
+the system against real inputs can do that.
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+The deeper lesson about bias is that it lives in the *data* as much as in the
+*code*. The scoring formula had no explicit preference for any genre, but because
+some genres appeared only once in the catalog, those users always received the
+same single song no matter how poorly it fit their other preferences. That is a
+filter bubble produced entirely by catalog construction, not by any flaw in the
+algorithm. In a real platform — where catalog and algorithm are maintained by
+different teams — this kind of bias can be invisible for a long time because each
+team's piece looks fine in isolation.
 
 
 ---

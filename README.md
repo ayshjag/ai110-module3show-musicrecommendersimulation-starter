@@ -162,7 +162,35 @@ pip install -r requirements.txt
 3. Run the app:
 
 ```bash
-python -m src.main
+python -m src.main            # all profiles, balanced mode
+python -m src.main --modes    # compare all scoring modes
+python -m src.main --diversity  # show diversity re-ranker
+```
+
+### Sample Terminal Output
+
+```
+Loaded songs: 20
+
+  Profile : chill_lofi_fan  |  Mode : balanced
+  Genre   : lofi  Mood : chill  Energy : 0.4  Sub-mood : dreamy  Decade : 2020
+  #   Title               Artist          Genre/Mood       Sub-mood    Pop  Era   Score     Top reasons
+  --  ------------------  --------------  ---------------  ----------  ---  ----  --------  ----------------------------------------------
+  #1  Library Rain        Paper Lanterns  lofi / chill     dreamy      38   2020  6.29/6.6  genre 'lofi' (+2.0) | mood 'chill' (+1.5)
+  #2  Midnight Coding     LoRoom          lofi / chill     dreamy      45   2020  6.27/6.6  genre 'lofi' (+2.0) | mood 'chill' (+1.5)
+  #3  Focus Flow          LoRoom          lofi / focused   meditative  50   2020  3.84/6.6  genre 'lofi' (+2.0) | energy 0.40→0.40 (+1.00)
+  #4  Spacewalk Thoughts  Orbit Bloom     ambient / chill  meditative  29   2010  3.18/6.6  mood 'chill' (+1.5) | energy 0.28→0.40 (+0.88)
+  #5  Island Drift        Kaia Blue       reggae / chill   carefree    44   2010  3.04/6.6  mood 'chill' (+1.5) | energy 0.52→0.40 (+0.88)
+
+  Profile : high_energy_sad  |  Mode : balanced
+  Genre   : classical  Mood : sad  Energy : 0.9  Sub-mood : aggressive  Decade : —
+  #   Title           Artist       Genre/Mood            Sub-mood     Pop  Era   Score     Top reasons
+  --  --------------  -----------  --------------------  -----------  ---  ----  --------  ---------------------------------------------------
+  #1  Storm Runner    Voltline     rock / intense        aggressive   68   2010  2.64/6.6  energy 0.91→0.90 (+0.99) | electronic 0.10 (+0.45)
+  #2  Iron Cathedral  Frostwall    metal / angry         aggressive   61   2010  2.60/6.6  energy 0.96→0.90 (+0.94) | electronic 0.05 (+0.47)
+  #3  Sonata in Grey  Elena Marsh  classical / peaceful  meditative   22   2010  2.38/6.6  genre 'classical' (+2.0) | energy 0.20→0.90 (+0.30)
+  #4  Broken Compass  Rust & Rope  country / sad         melancholic  27   2000  2.03/6.6  mood 'sad' (+1.5) | energy 0.30→0.90 (+0.40)
+  #5  Gym Hero        Max Pulse    pop / intense         motivated    81   2020  1.69/6.6  energy 0.93→0.90 (+0.97) | electronic 0.05 (+0.47)
 ```
 
 ### Running Tests
@@ -179,25 +207,65 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+### Experiment 1: Weight shift — energy ×2, genre ×0.5
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+Changed `genre=2.0 → 1.0` and `energy=1.0 → 2.0` using the `--modes` flag
+(`energy_focused` mode).
+
+**chill_lofi_fan result:** Top 2 unchanged. Position #3 flipped from *Focus Flow*
+(lofi/focused, genre match but mood mismatch) to *Spacewalk Thoughts*
+(ambient/chill, no genre match but perfect energy + mood). Energy closeness now
+outweighs the genre bonus for the third slot.
+
+**high_energy_sad result (most revealing):** *Sonata in Grey* (classical, energy=0.20)
+dropped out of the top 5 entirely. With default weights its genre bonus (2.0) beat
+a 0.70-point energy penalty. With energy doubled, the high-energy rock/metal tracks
+correctly dominated. The experiment showed the default genre weight was *too strong*
+for adversarial profiles.
+
+**Conclusion:** Genre weight makes recommendations feel predictable and on-brand;
+energy weight makes them feel sonically accurate. The right balance depends on the
+user — a static number can't capture both at once.
+
+### Experiment 2: Scoring modes comparison (`python -m src.main --modes`)
+
+Ran all five modes (balanced, genre_first, mood_first, energy_focused, discovery)
+against the `chill_lofi_fan` profile. Key finding:
+
+- `mood_first` bumped *Spacewalk Thoughts* (ambient/chill) past *Focus Flow*
+  (lofi/focused) because mood weight 3.0 > genre bonus 1.0 for the third slot.
+- `discovery` mode (negative popularity weight) slightly penalised *Focus Flow*
+  (pop=50) relative to less-known tracks — a small but measurable shift.
+- `genre_first` mode locked the top 3 as all-lofi regardless of mood or energy.
+
+### Experiment 3: Diversity re-ranker (`python -m src.main --diversity`)
+
+Without diversity: `chill_lofi_fan` top 5 included 3 lofi tracks and 2 artists
+from LoRoom. With diversity (max 2 per genre, max 2 per artist): *Focus Flow*
+was replaced by *Coffee Shop Stories* (jazz), spreading the list across 4 genres.
+Scores did not change — only selection did.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
+- **Genre weight is too dominant for sparse catalogs.** If the user's favorite
+  genre has only one song, that song is always #1 even if every other attribute
+  mismatches. The `high_energy_sad` (classical) profile surfaced a peaceful,
+  slow song as #3 purely on genre label — a clear failure.
+- **Filter bubbles from catalog size.** The `perfectly_average` (r&b/romantic)
+  profile had its only matching song score 4.84, then the #2 result dropped to
+  1.29. There was nothing else to recommend. Diversity of output requires
+  diversity of data.
+- **Binary genre matching.** "indie pop" and "pop" are treated as unrelated.
+  A pop fan who would enjoy *Rooftop Lights* gets no credit for that affinity.
+- **No temporal or contextual signals.** The system does not know if it is
+  7 AM (study mode) or 11 PM (wind-down). Real platforms use time of day as
+  a strong signal.
+- **Manually assigned attributes.** Energy, acousticness, and valence values
+  were set by hand during design — not derived from real audio analysis.
 
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+See `model_card.md` for a deeper breakdown of each limitation.
 
 ---
 

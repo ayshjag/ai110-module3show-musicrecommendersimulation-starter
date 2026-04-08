@@ -266,6 +266,26 @@ def load_songs(csv_path: str) -> List[Dict]:
     return songs
 
 
+def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
+    """Scores a single song against user preferences; returns (score, reasons)."""
+    total, reasons = _compute_score(
+        genre=song["genre"],
+        mood=song["mood"],
+        energy=song["energy"],
+        acousticness=song["acousticness"],
+        fav_genre=user_prefs.get("genre", ""),
+        fav_mood=user_prefs.get("mood", ""),
+        target_energy=float(user_prefs.get("target_energy", 0.5)),
+        likes_acoustic=bool(user_prefs.get("likes_acoustic", False)),
+        sub_mood=song.get("sub_mood", ""),
+        popularity=song.get("popularity", 50),
+        release_decade=song.get("release_decade", 2020),
+        preferred_sub_mood=user_prefs.get("preferred_sub_mood", ""),
+        preferred_decade=int(user_prefs.get("preferred_decade", 0)),
+    )
+    return total, reasons
+
+
 def recommend_songs(
     user_prefs: Dict,
     songs: List[Dict],

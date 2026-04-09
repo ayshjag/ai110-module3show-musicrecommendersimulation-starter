@@ -182,7 +182,27 @@ Loaded songs: 20
   #4  Spacewalk Thoughts  Orbit Bloom     ambient / chill  meditative  29   2010  3.18/6.6  mood 'chill' (+1.5) | energy 0.28→0.40 (+0.88)
   #5  Island Drift        Kaia Blue       reggae / chill   carefree    44   2010  3.04/6.6  mood 'chill' (+1.5) | energy 0.52→0.40 (+0.88)
 
-  Profile : high_energy_sad  |  Mode : balanced
+  Profile : pop_party_goer  |  Mode : balanced
+  Genre   : pop  Mood : happy  Energy : 0.85  Sub-mood : euphoric  Decade : 2020
+  #   Title                 Artist         Genre/Mood           Sub-mood   Pop  Era   Score     Top reasons
+  --  --------------------  -------------  -------------------  ---------  ---  ----  --------  --------------------------------------------------
+  #1  Sunrise City          Neon Echo      pop / happy          euphoric   72   2020  6.40/6.6  genre 'pop' (+2.0) | mood 'happy' (+1.5)
+  #2  Rooftop Lights        Indigo Parade  indie pop / happy    euphoric   63   2020  4.22/6.6  mood 'happy' (+1.5) | energy 0.76→0.85 (+0.91)
+  #3  Gym Hero              Max Pulse      pop / intense        motivated  81   2020  3.94/6.6  genre 'pop' (+2.0) | energy 0.93→0.85 (+0.92)
+  #4  Crown Heights Summer  Jay Reels      hip-hop / energetic  euphoric   77   2020  2.99/6.6  energy 0.85→0.85 (+1.00) | electronic 0.08 (+0.46)
+  #5  Pulse Protocol        Circuit Null   edm / energetic      motivated  84   2020  1.92/6.6  energy 0.97→0.85 (+0.88) | electronic 0.02 (+0.49)
+
+  Profile : late_night_driver  |  Mode : balanced
+  Genre   : synthwave  Mood : moody  Energy : 0.75  Sub-mood : melancholic  Decade : 2020
+  #   Title                 Artist       Genre/Mood           Sub-mood     Pop  Era   Score     Top reasons
+  --  --------------------  -----------  -------------------  -----------  ---  ----  --------  --------------------------------------------------
+  #1  Night Drive Loop      Neon Echo    synthwave / moody    melancholic  55   2020  6.36/6.6  genre 'synthwave' (+2.0) | mood 'moody' (+1.5)
+  #2  Neon Sermon           GVRL         electronic / moody   melancholic  52   2020  4.35/6.6  mood 'moody' (+1.5) | energy 0.70→0.75 (+0.95)
+  #3  Crown Heights Summer  Jay Reels    hip-hop / energetic  euphoric     77   2020  1.89/6.6  energy 0.85→0.75 (+0.90) | electronic 0.08 (+0.46)
+  #4  Broken Compass        Rust & Rope  country / sad        melancholic  27   2000  1.88/6.6  energy 0.30→0.75 (+0.55) | electronic 0.90 (+0.05)
+  #5  Sunrise City          Neon Echo    pop / happy          euphoric     72   2020  1.86/6.6  energy 0.82→0.75 (+0.93) | electronic 0.18 (+0.41)
+
+  Profile : high_energy_sad  |  Mode : balanced  (adversarial profile)
   Genre   : classical  Mood : sad  Energy : 0.9  Sub-mood : aggressive  Decade : —
   #   Title           Artist       Genre/Mood            Sub-mood     Pop  Era   Score     Top reasons
   --  --------------  -----------  --------------------  -----------  ---  ----  --------  ---------------------------------------------------
